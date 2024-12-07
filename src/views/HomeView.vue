@@ -75,6 +75,20 @@
         </div>
         <div class="modal-body">
           <div class="form-group">
+            <label for="fileSelect">File:</label>
+            <select
+              id="fileSelect"
+              v-model="selectedCommentFile"
+              class="file-select"
+              required
+            >
+              <option value="">Select a file</option>
+              <option v-for="file in diffFiles" :key="file" :value="file">
+                {{ file }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
             <label for="lineNumber">Line Number:</label>
             <input
               type="number"
@@ -109,7 +123,7 @@
           <button
             class="submit-button"
             @click="handleNewComment"
-            :disabled="!newCommentLine || !newCommentText.trim()"
+            :disabled="!selectedCommentFile || !newCommentLine || !newCommentText.trim()"
           >
             Add Comment
           </button>
@@ -181,7 +195,7 @@ renderer.code = (code, language) => {
       console.warn('Highlight.js error:', e)
     }
   }
-  
+
   // Ha nincs nyelv megadva vagy nem támogatott
   try {
     const autoHighlighted = hljs.highlightAuto(code).value
@@ -234,6 +248,24 @@ const rawDiffText = ref('')
 const showFileModal = ref(false)
 const selectedFile = ref<File | null>(null)
 
+// Új state a fájl választóhoz
+const selectedCommentFile = ref('')
+const diffFiles = computed(() => {
+  if (!diffContainer.value) return []
+  
+  const fileElements = diffContainer.value.querySelectorAll('.d2h-wrapper .d2h-file-header .d2h-file-name')
+  const files: string[] = []
+  
+  fileElements.forEach(el => {
+    const fileName = el.innerHTML.trim()
+    if (fileName && !files.includes(fileName)) {
+      files.push(fileName)
+    }
+  })
+  
+  return files
+})
+
 // Computed properties
 const isValidUrl = computed(() => {
   try {
@@ -280,19 +312,36 @@ const handleSubmit = async () => {
   }
 }
 
-const insertCommentAfterLine = async (lineNumber: number, commentText: string, enableMarkdown: boolean = false) => {
+const insertCommentAfterLine = async (fileName: string, lineNumber: number, commentText: string, enableMarkdown: boolean = false) => {
   if (!isReadyForTest.value) return false
 
   try {
     await nextTick()
-    const diffElement = diffContainer.value?.querySelector('.d2h-files-diff')
+    const diffElement = diffContainer.value
     if (!diffElement) {
       console.error('Diff element not found')
       return false
     }
 
-    // Megkeressük mindkét diff táblázatot
-    const fileDiffs = diffElement.querySelectorAll('.d2h-file-side-diff')
+    // Keressük meg a megfelelő fájlt az új selector használatával
+    const fileElements = diffElement.querySelectorAll('.d2h-wrapper .d2h-file-header')
+    let targetFileElement: Element | null = null
+
+    for (const fileEl of fileElements) {
+      const fileNameEl = fileEl.querySelector('.d2h-file-name')
+      if (fileNameEl && fileNameEl.innerHTML.includes(fileName)) {
+        targetFileElement = fileEl.closest('.d2h-file-wrapper')
+        break
+      }
+    }
+
+    if (!targetFileElement) {
+      console.error(`File not found: ${fileName}`)
+      return false
+    }
+
+    // Megkeressük mindkét diff táblázatot a fájlon belül
+    const fileDiffs = targetFileElement.querySelectorAll('.d2h-file-side-diff')
     const leftDiff = fileDiffs[0]
     const rightDiff = fileDiffs[1]
 
@@ -335,7 +384,7 @@ const insertCommentAfterLine = async (lineNumber: number, commentText: string, e
     }
 
     if (!targetRightRow || !targetLeftRow) {
-      console.error(`Line ${lineNumber} not found or index mismatch`)
+      console.error(`Line ${lineNumber} not found or index mismatch in file ${fileName}`)
       return false
     }
 
@@ -350,6 +399,7 @@ const insertCommentAfterLine = async (lineNumber: number, commentText: string, e
         <div class="comment-content ${enableMarkdown ? 'markdown-content' : ''}">
           <div class="comment-header">
             <div class="comment-info">
+              <span class="comment-file-name">${fileName}</span>
               <span class="comment-line-number">Line ${lineNumber}</span>
               <span class="comment-format">${enableMarkdown ? '(Markdown)' : '(Plain text)'}</span>
             </div>
@@ -387,6 +437,7 @@ const insertCommentAfterLine = async (lineNumber: number, commentText: string, e
 
     // Debug információk
     console.log('Comment inserted:', {
+      fileName,
       lineNumber,
       targetIndex,
       rightRowFound: !!targetRightRow,
@@ -404,13 +455,15 @@ const insertCommentAfterLine = async (lineNumber: number, commentText: string, e
 
 // Új metódus a komment hozzáadásához
 const handleNewComment = () => {
-  if (newCommentLine.value && newCommentText.value.trim()) {
+  if (selectedCommentFile.value && newCommentLine.value && newCommentText.value.trim()) {
     insertCommentAfterLine(
-      Number(newCommentLine.value), 
+      selectedCommentFile.value,
+      Number(newCommentLine.value),
       newCommentText.value.trim(),
       enableMarkdown.value
     )
     showCommentModal.value = false
+    selectedCommentFile.value = ''
     newCommentLine.value = ''
     newCommentText.value = ''
   }
@@ -427,7 +480,7 @@ const handleRawDiffSubmit = () => {
       colorScheme: 'light',
       highlightCode: true
     })
-    
+
     // Alapértelmezett PR adatok beállítása raw diff esetén
     prDetails.value = {
       diff: rawDiffText.value,
@@ -435,7 +488,7 @@ const handleRawDiffSubmit = () => {
       number: 0,
       repository: 'Raw Diff'
     }
-    
+
     showRawDiffModal.value = false
     rawDiffText.value = ''
   }
@@ -462,17 +515,17 @@ const handleFileLoad = async () => {
       colorScheme: 'light',
       highlightCode: true
     })
-    
+
     prDetails.value = {
       diff: text,
       title: `File: ${selectedFile.value.name}`,
       number: 0,
       repository: 'Local File'
     }
-    
+
     showFileModal.value = false
     selectedFile.value = null
-    
+
   } catch (error) {
     console.error('Error reading file:', error)
     error.value = 'Hiba történt a fájl beolvasása közben'
@@ -768,12 +821,12 @@ const addCommentToLine = (fileName: string, lineNumber: number, commentText: str
         margin-bottom: 8px;
         padding-bottom: 8px;
         border-bottom: 1px solid var(--border-color);
-        
+
         .comment-line-number {
           font-weight: 600;
           color: var(--primary-color);
         }
-        
+
         .comment-timestamp {
           color: var(--text-secondary);
           font-size: 11px;
@@ -972,26 +1025,26 @@ const addCommentToLine = (fileName: string, lineNumber: number, commentText: str
     border-radius: 4px;
     font-size: 0.875rem;
     cursor: pointer;
-    
+
     &.cancel-button {
       background-color: var(--surface-color);
       border: 1px solid var(--border-color);
       color: var(--text-color);
-      
+
       &:hover {
         background-color: var(--hover-color);
       }
     }
-    
+
     &.submit-button {
       background-color: var(--primary-color);
       border: 1px solid var(--primary-color);
       color: white;
-      
+
       &:hover:not(:disabled) {
         background-color: var(--primary-hover);
       }
-      
+
       &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -1050,8 +1103,35 @@ const addCommentToLine = (fileName: string, lineNumber: number, commentText: str
     box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.1);
   }
 }
+
+.file-select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+
+  option {
+    padding: 0.5rem;
+  }
+}
+
+.form-group {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-size: 0.875rem;
+  }
+}
 </style>
-
-
-</```
-rewritten_file>
