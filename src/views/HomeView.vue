@@ -29,8 +29,24 @@
       </div>
     </header>
 
-    <div class="analyze-container" v-if="htmlDiff">
-      <button @click="analyzeDiff" class="analyze-button">Elemzés</button>
+    <div class="analyze-section" v-if="htmlDiff">
+      <button
+        @click="analyzeDiff"
+        class="analyze-button"
+      >
+        Elemzés
+      </button>
+
+      <!-- Progress Bar -->
+      <div v-if="showProgressBar" class="simple-progress-container">
+        <div class="simple-progress-bar">
+          <div 
+            class="simple-progress-fill"
+            :style="{ width: `${progressValue}%` }"
+          ></div>
+        </div>
+        <div class="simple-progress-text">{{ progressValue }}%</div>
+      </div>
     </div>
 
     <div v-if="showRawDiffModal" class="modal-overlay">
@@ -210,9 +226,7 @@ const prUrl = ref('')
 const error = ref('')
 const loading = ref(false)
 const diffContainer = ref<HTMLElement | null>(null)
-const selectedLine = ref<number | null>(null)
-const newComment = ref('')
-const comments = ref<Comment[]>([])
+
 const prDetails = ref<{
   diff: string
   title: string
@@ -520,7 +534,7 @@ const handleFileLoad = async () => {
     selectedFile.value = null
   } catch (error) {
     console.error('Error reading file:', error)
-    error.value = 'Hiba t��rtént a fájl beolvasása közben'
+    error.value = 'Hiba történt a fájl beolvasása közben'
   }
 }
 
@@ -529,42 +543,10 @@ defineExpose({
   insertCommentAfterLine,
 })
 
-const addCommentToLine = (fileName: string, lineNumber: number, commentText: string) => {
-  const diffElement = diffContainer.value
-  if (!diffElement) return
-
-  const fileElement = Array.from(diffElement.querySelectorAll('.d2h-file-wrapper')).find((el) =>
-    el.querySelector('.d2h-file-name')?.textContent?.includes(fileName),
-  )
-
-  if (!fileElement) {
-    console.error(`File not found: ${fileName}`)
-    return
-  }
-
-  const codeLine = fileElement.querySelector(`[data-line-number="${lineNumber}"]`)
-  if (!codeLine) {
-    console.error(`Line ${lineNumber} not found in file ${fileName}`)
-    return
-  }
-
-  const rect = (codeLine as HTMLElement).getBoundingClientRect()
-  const containerRect = diffElement.getBoundingClientRect()
-  const position = rect.top - containerRect.top
-
-  comments.value.push({
-    id: Date.now(),
-    text: commentText,
-    lineNumber,
-    position,
-    fileName,
-    timestamp: new Date(),
-  })
-}
-
 const analyzeDiff = async () => {
   const { diff } = prDetails.value
   const files = gitDiffParser.parse(diff)
+  toggleProgressBar(true)
 
   const patches = files
     .map((file) => ({
@@ -572,11 +554,20 @@ const analyzeDiff = async () => {
       patch: createPatchesFromDiff(file.hunks),
     }))
     .filter((it) => isHunkIsTooLarge(it.patch) === false)
-  const reviewResponses = await Promise.all(
+
+  let completedPatches = 0
+  const totalPatches = patches.length
+
+  await Promise.all(
     patches.map(async (patch) => {
       const diffReview = await reviewFileDiff(patch.patch, patch.fileName)
       if (diffReview.response !== 'LGTM!') {
         const response = parseReviewResponse(diffReview.response, patch.fileName)
+        // Százalék számítás
+        completedPatches++
+        const percentage = Math.floor((completedPatches / totalPatches) * 100)
+        updateProgress(percentage)
+        
         response.forEach((it) => {
           const { lineEnd, commentText, fileName, diff } = it
           const comment = `${commentText}\n${diff}`
@@ -584,9 +575,29 @@ const analyzeDiff = async () => {
             insertCommentAfterLine(fileName, lineEnd, comment, true)
           }
         })
+      } else {
+        // Ha LGTM, akkor is számoljuk a progress-t
+        completedPatches++
+        const percentage = Math.floor((completedPatches / totalPatches) * 100)
+        updateProgress(percentage)
       }
     }),
   )
+
+  toggleProgressBar(false)
+}
+
+// Új progress változók
+const showProgressBar = ref(false)
+const progressValue = ref(0)
+
+// Példa függvény a progress bar teszteléséhez
+const updateProgress = (value: number) => {
+  progressValue.value = Math.min(100, Math.max(0, value))
+}
+
+const toggleProgressBar = (show: boolean) => {
+  showProgressBar.value = show
 }
 </script>
 
@@ -1155,10 +1166,12 @@ const analyzeDiff = async () => {
   }
 }
 
-.analyze-container {
+.analyze-section {
   display: flex;
-  justify-content: center;
-  margin: 1rem 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0;
 }
 
 .analyze-button {
@@ -1171,14 +1184,31 @@ const analyzeDiff = async () => {
   font-size: 1rem;
   font-weight: 500;
   transition: all 0.2s ease;
+}
 
-  &:hover {
-    background-color: var(--success-hover-color, #218838);
-    border-color: var(--success-hover-color, #218838);
-  }
+.simple-progress-container {
+  width: 100%;
+  max-width: 500px;
+}
 
-  &:active {
-    transform: translateY(1px);
-  }
+.simple-progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.simple-progress-fill {
+  height: 100%;
+  background-color: var(--success-color, #28a745);
+  transition: width 0.3s ease;
+}
+
+.simple-progress-text {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-color);
 }
 </style>
