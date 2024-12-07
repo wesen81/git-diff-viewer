@@ -186,6 +186,8 @@ import 'diff2html/bundles/css/diff2html.min.css'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
+import gitDiffParser from 'gitdiff-parser'
+import { createPatchesFromDiff, parseReviewResponse, reviewFileDiff } from '@/services/ai-pr-review/review.ts'
 
 // Marked renderer létrehozása és testreszabása
 const renderer = new marked.Renderer()
@@ -261,17 +263,17 @@ const selectedFile = ref<File | null>(null)
 const selectedCommentFile = ref('')
 const diffFiles = computed(() => {
   if (!diffContainer.value) return []
-  
+
   const fileElements = diffContainer.value.querySelectorAll('.d2h-wrapper .d2h-file-header .d2h-file-name')
   const files: string[] = []
-  
+
   fileElements.forEach(el => {
     const fileName = el.innerHTML.trim()
     if (fileName && !files.includes(fileName)) {
       files.push(fileName)
     }
   })
-  
+
   return files
 })
 
@@ -579,11 +581,29 @@ const addCommentToLine = (fileName: string, lineNumber: number, commentText: str
 }
 
 const analyzeDiff = async () => {
-  // TODO: AI implementációja
-  // - Diff elemzése
-  // - Javaslatok generálása
-  // - Automatikus kommentek létrehozása
-  console.log('Elemzés indítása...')
+  const { diff } = prDetails.value
+  const files = gitDiffParser.parse(diff)
+
+  const patches = files.map((file) => ({
+    fileName: file.newPath || file.oldPath,
+    patch: createPatchesFromDiff(file.hunks)
+  }))
+  const reviewResponses = (await Promise.all(patches.map(async (patch) => {
+      return await reviewFileDiff(patch.patch, patch.fileName)
+    })
+  )).filter(it => it.response !== "LGTM!")
+
+  const response = reviewResponses.map(it => parseReviewResponse(it.response, it.fileName)).flat()
+
+  console.log(response)
+
+  response.forEach(it => {
+    const { lineEnd, commentText, fileName, diff } = it
+    const comment =`${commentText}\n${diff}`
+    if (!isNaN(it.lineEnd)) {
+     insertCommentAfterLine(fileName, lineEnd, comment, true)
+    }
+  })
 }
 </script>
 

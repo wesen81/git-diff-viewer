@@ -24,6 +24,7 @@ export const createPatchesFromDiff = (hunks: Hunk[]): string => {
 const chatModel = new ChatOpenAI({
   model: 'gpt-4o-mini',
   temperature: 0,
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY
 });
 const reviewPromptTemplate = PromptTemplate.fromTemplate(reviewFileDiffPrompt)
 const reviewChain = reviewPromptTemplate.pipe(chatModel)
