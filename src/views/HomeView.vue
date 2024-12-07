@@ -3,37 +3,25 @@
     <header class="content-header">
       <div class="header-content">
         <div class="input-container">
-          <button
-            @click="showRawDiffModal = true"
-            class="raw-diff-button"
-          >
-            Raw Diff
-          </button>
-          <button
-            @click="showFileModal = true"
-            class="raw-diff-button"
-          >
-            File Diff
-          </button>
+          <button @click="showRawDiffModal = true" class="raw-diff-button">Raw Diff</button>
+          <button @click="showFileModal = true" class="raw-diff-button">File Diff</button>
           <input
             v-model="prUrl"
             type="url"
             placeholder="Írd be a GitHub PR URL-t"
             class="pr-input"
             @keyup.enter="handleSubmit"
-          >
-          <button
-            @click="handleSubmit"
-            :disabled="!isValidUrl || loading"
-            class="submit-button"
-          >
+          />
+          <button @click="handleSubmit" :disabled="!isValidUrl || loading" class="submit-button">
             {{ loading ? 'Betöltés...' : 'Betöltés' }}
           </button>
           <button
             @click="showCommentModal = true"
             class="test-button"
             :disabled="loading || !prDetails || !htmlDiff"
-            v-tooltip="loading ? 'Betöltés folyamatban...' : !prDetails ? 'Először tölts be egy PR-t' : ''"
+            v-tooltip="
+              loading ? 'Betöltés folyamatban...' : !prDetails ? 'Először tölts be egy PR-t' : ''
+            "
           >
             Add Comment
           </button>
@@ -42,12 +30,7 @@
     </header>
 
     <div class="analyze-container" v-if="htmlDiff">
-      <button
-        @click="analyzeDiff"
-        class="analyze-button"
-      >
-        Elemzés
-      </button>
+      <button @click="analyzeDiff" class="analyze-button">Elemzés</button>
     </div>
 
     <div v-if="showRawDiffModal" class="modal-overlay">
@@ -85,12 +68,7 @@
         <div class="modal-body">
           <div class="form-group">
             <label for="fileSelect">File:</label>
-            <select
-              id="fileSelect"
-              v-model="selectedCommentFile"
-              class="file-select"
-              required
-            >
+            <select id="fileSelect" v-model="selectedCommentFile" class="file-select" required>
               <option value="">Select a file</option>
               <option v-for="file in diffFiles" :key="file" :value="file">
                 {{ file }}
@@ -105,7 +83,7 @@
               v-model="newCommentLine"
               class="line-input"
               min="1"
-            >
+            />
           </div>
           <div class="form-group">
             <label for="commentText">Comment:</label>
@@ -113,15 +91,16 @@
               id="commentText"
               v-model="newCommentText"
               class="comment-textarea"
-              :placeholder="enableMarkdown ? 'Enter your comment using Markdown...' : 'Enter your comment here...'"
+              :placeholder="
+                enableMarkdown
+                  ? 'Enter your comment using Markdown...'
+                  : 'Enter your comment here...'
+              "
               rows="4"
             ></textarea>
             <div class="markdown-toggle">
               <label>
-                <input
-                  type="checkbox"
-                  v-model="enableMarkdown"
-                >
+                <input type="checkbox" v-model="enableMarkdown" />
                 Enable Markdown
               </label>
             </div>
@@ -147,19 +126,11 @@
           <button class="close-button" @click="showFileModal = false">&times;</button>
         </div>
         <div class="modal-body">
-          <input
-            type="file"
-            @change="handleFileSelect"
-            accept=".diff,.patch,text/plain"
-          >
+          <input type="file" @change="handleFileSelect" accept=".diff,.patch,text/plain" />
         </div>
         <div class="modal-footer">
           <button class="cancel-button" @click="showFileModal = false">Mégse</button>
-          <button
-            class="submit-button"
-            @click="handleFileLoad"
-            :disabled="!selectedFile"
-          >
+          <button class="submit-button" @click="handleFileLoad" :disabled="!selectedFile">
             Betöltés
           </button>
         </div>
@@ -191,7 +162,7 @@ import {
   createPatchesFromDiff,
   isHunkIsTooLarge,
   parseReviewResponse,
-  reviewFileDiff
+  reviewFileDiff,
 } from '@/services/ai-pr-review/review.ts'
 
 // Marked renderer létrehozása és testreszabása
@@ -204,7 +175,7 @@ renderer.code = (code, language) => {
     try {
       const highlightedCode = hljs.highlight(code, {
         language,
-        ignoreIllegals: true
+        ignoreIllegals: true,
       }).value
       return `<pre><code class="hljs language-${language}">${highlightedCode}</code></pre>`
     } catch (e) {
@@ -231,7 +202,7 @@ marked.setOptions({
   sanitize: false,
   smartLists: true,
   smartypants: true,
-  xhtml: true
+  xhtml: true,
 })
 
 // Refs
@@ -243,10 +214,10 @@ const selectedLine = ref<number | null>(null)
 const newComment = ref('')
 const comments = ref<Comment[]>([])
 const prDetails = ref<{
-  diff: string;
-  title: string;
-  number: number;
-  repository: string;
+  diff: string
+  title: string
+  number: number
+  repository: string
 } | null>(null)
 const htmlDiff = ref('')
 
@@ -269,10 +240,12 @@ const selectedCommentFile = ref('')
 const diffFiles = computed(() => {
   if (!diffContainer.value) return []
 
-  const fileElements = diffContainer.value.querySelectorAll('.d2h-wrapper .d2h-file-header .d2h-file-name')
+  const fileElements = diffContainer.value.querySelectorAll(
+    '.d2h-wrapper .d2h-file-header .d2h-file-name',
+  )
   const files: string[] = []
 
-  fileElements.forEach(el => {
+  fileElements.forEach((el) => {
     const fileName = el.innerHTML.trim()
     if (fileName && !files.includes(fileName)) {
       files.push(fileName)
@@ -319,7 +292,7 @@ const handleSubmit = async () => {
       outputFormat: 'side-by-side',
       renderNothingWhenEmpty: false,
       colorScheme: 'light',
-      highlightCode: true
+      highlightCode: true,
     })
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Hiba történt a PR betöltése közben'
@@ -328,7 +301,12 @@ const handleSubmit = async () => {
   }
 }
 
-const insertCommentAfterLine = async (fileName: string, lineNumber: number, commentText: string, enableMarkdown: boolean = false) => {
+const insertCommentAfterLine = async (
+  fileName: string,
+  lineNumber: number,
+  commentText: string,
+  enableMarkdown: boolean = false,
+) => {
   if (!isReadyForTest.value) return false
 
   try {
@@ -458,11 +436,10 @@ const insertCommentAfterLine = async (fileName: string, lineNumber: number, comm
       targetIndex,
       rightRowFound: !!targetRightRow,
       leftRowFound: !!targetLeftRow,
-      rightHeight: rightCommentDiv.offsetHeight
+      rightHeight: rightCommentDiv.offsetHeight,
     })
 
     return true
-
   } catch (error) {
     console.error('Error adding comment:', error)
     return false
@@ -476,7 +453,7 @@ const handleNewComment = () => {
       selectedCommentFile.value,
       Number(newCommentLine.value),
       newCommentText.value.trim(),
-      enableMarkdown.value
+      enableMarkdown.value,
     )
     showCommentModal.value = false
     selectedCommentFile.value = ''
@@ -494,7 +471,7 @@ const handleRawDiffSubmit = () => {
       outputFormat: 'side-by-side',
       renderNothingWhenEmpty: false,
       colorScheme: 'light',
-      highlightCode: true
+      highlightCode: true,
     })
 
     // Alapértelmezett PR adatok beállítása raw diff esetén
@@ -502,7 +479,7 @@ const handleRawDiffSubmit = () => {
       diff: rawDiffText.value,
       title: 'Raw Diff Preview',
       number: 0,
-      repository: 'Raw Diff'
+      repository: 'Raw Diff',
     }
 
     showRawDiffModal.value = false
@@ -529,19 +506,18 @@ const handleFileLoad = async () => {
       outputFormat: 'side-by-side',
       renderNothingWhenEmpty: false,
       colorScheme: 'light',
-      highlightCode: true
+      highlightCode: true,
     })
 
     prDetails.value = {
       diff: text,
       title: `File: ${selectedFile.value.name}`,
       number: 0,
-      repository: 'Local File'
+      repository: 'Local File',
     }
 
     showFileModal.value = false
     selectedFile.value = null
-
   } catch (error) {
     console.error('Error reading file:', error)
     error.value = 'Hiba t��rtént a fájl beolvasása közben'
@@ -550,15 +526,16 @@ const handleFileLoad = async () => {
 
 // Komponens exportálása
 defineExpose({
-  insertCommentAfterLine
+  insertCommentAfterLine,
 })
 
 const addCommentToLine = (fileName: string, lineNumber: number, commentText: string) => {
   const diffElement = diffContainer.value
   if (!diffElement) return
 
-  const fileElement = Array.from(diffElement.querySelectorAll('.d2h-file-wrapper'))
-    .find(el => el.querySelector('.d2h-file-name')?.textContent?.includes(fileName))
+  const fileElement = Array.from(diffElement.querySelectorAll('.d2h-file-wrapper')).find((el) =>
+    el.querySelector('.d2h-file-name')?.textContent?.includes(fileName),
+  )
 
   if (!fileElement) {
     console.error(`File not found: ${fileName}`)
@@ -581,7 +558,7 @@ const addCommentToLine = (fileName: string, lineNumber: number, commentText: str
     lineNumber,
     position,
     fileName,
-    timestamp: new Date()
+    timestamp: new Date(),
   })
 }
 
@@ -589,26 +566,27 @@ const analyzeDiff = async () => {
   const { diff } = prDetails.value
   const files = gitDiffParser.parse(diff)
 
-  const patches = files.map((file) => ({
-    fileName: file.newPath || file.oldPath,
-    patch: createPatchesFromDiff(file.hunks)
-  })).filter((it) => isHunkIsTooLarge(it.patch) === false)
-  const reviewResponses = (await Promise.all(patches.map(async (patch) => {
-      return await reviewFileDiff(patch.patch, patch.fileName)
-    })
-  )).filter(it => it.response !== "LGTM!")
-
-  const response = reviewResponses.map(it => parseReviewResponse(it.response, it.fileName)).flat()
-
-  console.log(response)
-
-  response.forEach(it => {
-    const { lineEnd, commentText, fileName, diff } = it
-    const comment =`${commentText}\n${diff}`
-    if (!isNaN(it.lineEnd)) {
-     insertCommentAfterLine(fileName, lineEnd, comment, true)
-    }
-  })
+  const patches = files
+    .map((file) => ({
+      fileName: file.newPath || file.oldPath,
+      patch: createPatchesFromDiff(file.hunks),
+    }))
+    .filter((it) => isHunkIsTooLarge(it.patch) === false)
+  const reviewResponses = await Promise.all(
+    patches.map(async (patch) => {
+      const diffReview = await reviewFileDiff(patch.patch, patch.fileName)
+      if (diffReview.response !== 'LGTM!') {
+        const response = parseReviewResponse(diffReview.response, patch.fileName)
+        response.forEach((it) => {
+          const { lineEnd, commentText, fileName, diff } = it
+          const comment = `${commentText}\n${diff}`
+          if (!isNaN(it.lineEnd)) {
+            insertCommentAfterLine(fileName, lineEnd, comment, true)
+          }
+        })
+      }
+    }),
+  )
 }
 </script>
 
@@ -853,7 +831,7 @@ const analyzeDiff = async () => {
       border: 1px solid var(--border-color);
       border-radius: 6px;
       color: var(--text-color);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
       font-size: 12px;
 
       .comment-header {
@@ -889,7 +867,7 @@ const analyzeDiff = async () => {
             padding: 1em;
             border-radius: 6px;
             background-color: var(--surface-color); // Használjuk a felület színét
-            border: 1px solid var(--border-color);  // Adjunk hozzá keretet
+            border: 1px solid var(--border-color); // Adjunk hozzá keretet
             overflow-x: auto;
             position: relative;
 
@@ -1103,7 +1081,7 @@ const analyzeDiff = async () => {
   font-size: 0.875rem;
   color: var(--text-secondary);
 
-  input[type="checkbox"] {
+  input[type='checkbox'] {
     margin: 0;
   }
 }
