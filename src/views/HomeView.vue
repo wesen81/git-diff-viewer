@@ -3,6 +3,12 @@
     <header class="content-header">
       <div class="header-content">
         <div class="input-container">
+          <button
+            @click="showRawDiffModal = true"
+            class="raw-diff-button"
+          >
+            Raw Diff
+          </button>
           <input
             v-model="prUrl"
             type="url"
@@ -28,6 +34,32 @@
         </div>
       </div>
     </header>
+
+    <div v-if="showRawDiffModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Raw Git Diff Bevitel</h3>
+          <button class="close-button" @click="showRawDiffModal = false">&times;</button>
+        </div>
+        <div class="modal-body">
+          <textarea
+            v-model="rawDiffText"
+            class="raw-diff-textarea"
+            placeholder="Másold ide a git diff szöveget..."
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="cancel-button" @click="showRawDiffModal = false">Mégse</button>
+          <button
+            class="submit-button"
+            @click="handleRawDiffSubmit"
+            :disabled="!rawDiffText.trim()"
+          >
+            Betöltés
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div v-if="showCommentModal" class="modal-overlay">
       <div class="modal-content">
@@ -161,6 +193,10 @@ const showCommentModal = ref(false)
 const newCommentLine = ref('')
 const newCommentText = ref('')
 const enableMarkdown = ref(false)
+
+// Új ref-ek a raw diff modalhoz
+const showRawDiffModal = ref(false)
+const rawDiffText = ref('')
 
 // Computed properties
 const isValidUrl = computed(() => {
@@ -341,6 +377,31 @@ const handleNewComment = () => {
     showCommentModal.value = false
     newCommentLine.value = ''
     newCommentText.value = ''
+  }
+}
+
+// Új metódus a raw diff kezelésére
+const handleRawDiffSubmit = () => {
+  if (rawDiffText.value.trim()) {
+    htmlDiff.value = html(parse(rawDiffText.value), {
+      drawFileList: true,
+      matching: 'lines',
+      outputFormat: 'side-by-side',
+      renderNothingWhenEmpty: false,
+      colorScheme: 'light',
+      highlightCode: true
+    })
+    
+    // Alapértelmezett PR adatok beállítása raw diff esetén
+    prDetails.value = {
+      diff: rawDiffText.value,
+      title: 'Raw Diff Preview',
+      number: 0,
+      repository: 'Raw Diff'
+    }
+    
+    showRawDiffModal.value = false
+    rawDiffText.value = ''
   }
 }
 
@@ -877,5 +938,46 @@ const addCommentToLine = (fileName: string, lineNumber: number, commentText: str
     margin: 0;
   }
 }
+
+.raw-diff-button {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: var(--hover-color);
+    border-color: var(--primary-color);
+  }
+}
+
+.raw-diff-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  padding: 1rem;
+  margin: 1rem 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 14px;
+  resize: none;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.1);
+  }
+}
 </style>
 
+
+</```
+rewritten_file>
