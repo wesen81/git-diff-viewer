@@ -9,6 +9,12 @@
           >
             Raw Diff
           </button>
+          <button
+            @click="showFileModal = true"
+            class="raw-diff-button"
+          >
+            File Diff
+          </button>
           <input
             v-model="prUrl"
             type="url"
@@ -111,6 +117,32 @@
       </div>
     </div>
 
+    <div v-if="showFileModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>File Diff Betöltése</h3>
+          <button class="close-button" @click="showFileModal = false">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input
+            type="file"
+            @change="handleFileSelect"
+            accept=".diff,.patch,text/plain"
+          >
+        </div>
+        <div class="modal-footer">
+          <button class="cancel-button" @click="showFileModal = false">Mégse</button>
+          <button
+            class="submit-button"
+            @click="handleFileLoad"
+            :disabled="!selectedFile"
+          >
+            Betöltés
+          </button>
+        </div>
+      </div>
+    </div>
+
     <p v-if="error" class="error-message">
       {{ error }}
     </p>
@@ -197,6 +229,10 @@ const enableMarkdown = ref(false)
 // Új ref-ek a raw diff modalhoz
 const showRawDiffModal = ref(false)
 const rawDiffText = ref('')
+
+// Új state-ek
+const showFileModal = ref(false)
+const selectedFile = ref<File | null>(null)
 
 // Computed properties
 const isValidUrl = computed(() => {
@@ -402,6 +438,44 @@ const handleRawDiffSubmit = () => {
     
     showRawDiffModal.value = false
     rawDiffText.value = ''
+  }
+}
+
+// Új metódusok
+const handleFileSelect = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files.length > 0) {
+    selectedFile.value = input.files[0]
+  }
+}
+
+const handleFileLoad = async () => {
+  if (!selectedFile.value) return
+
+  try {
+    const text = await selectedFile.value.text()
+    htmlDiff.value = html(parse(text), {
+      drawFileList: true,
+      matching: 'lines',
+      outputFormat: 'side-by-side',
+      renderNothingWhenEmpty: false,
+      colorScheme: 'light',
+      highlightCode: true
+    })
+    
+    prDetails.value = {
+      diff: text,
+      title: `File: ${selectedFile.value.name}`,
+      number: 0,
+      repository: 'Local File'
+    }
+    
+    showFileModal.value = false
+    selectedFile.value = null
+    
+  } catch (error) {
+    console.error('Error reading file:', error)
+    error.value = 'Hiba történt a fájl beolvasása közben'
   }
 }
 
@@ -739,7 +813,7 @@ const addCommentToLine = (fileName: string, lineNumber: number, commentText: str
               word-wrap: normal;
             }
 
-            // Highlight.js alapstílusok felülírása
+            // Highlight.js alapstílusa
             .hljs {
               background: transparent;
               padding: 0;
