@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { createPatchesFromDiff, parseReviewResponse, reviewFileDiff } from '@/services/ai-pr-review/review.ts'
+import {
+  createPatchesFromDiff,
+  isHunkIsTooLarge,
+  parseReviewResponse,
+  reviewFileDiff
+} from '@/services/ai-pr-review/review.ts'
 import diffTxt from './diff.txt'
 import * as fs from 'node:fs'
 import gitDiffParser from 'gitdiff-parser'
@@ -11,7 +16,7 @@ describe('HelloWorld', () => {
     const patches = files.map((file) => ({
       fileName: file.newPath || file.oldPath,
       patch: createPatchesFromDiff(file.hunks)
-    }))
+    })).filter((it) => isHunkIsTooLarge(it.patch) === false)
     const reviewResponses = (await Promise.all(patches.map(async (patch) => {
         return await reviewFileDiff(patch.patch, patch.fileName)
       })

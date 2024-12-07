@@ -2,6 +2,10 @@ import gitDiffParser, { Hunk } from 'gitdiff-parser'
 import { ChatOpenAI } from '@langchain/openai'
 import { ChatPromptTemplate, PromptTemplate } from '@langchain/core/prompts'
 import { reviewFileDiffPrompt } from '@/services/ai-pr-review/reviewPrompts.ts'
+import { getTokenCount } from '@/services/ai-pr-review/tokinzer.ts'
+
+
+const TOKEN_LIMIT = 40000
 
 export const createPatchesFromDiff = (hunks: Hunk[]): string => {
   const getLineNumber = (number?: string) => {
@@ -29,6 +33,11 @@ const chatModel = new ChatOpenAI({
 const reviewPromptTemplate = PromptTemplate.fromTemplate(reviewFileDiffPrompt)
 const reviewChain = reviewPromptTemplate.pipe(chatModel)
 
+
+
+export const isHunkIsTooLarge = (hunk: string): boolean => {
+  return getTokenCount(hunk) > TOKEN_LIMIT
+}
 
 export const reviewFileDiff = async (patches: string, filename: string): Promise<{
   fileName: string,

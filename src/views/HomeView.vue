@@ -187,7 +187,12 @@ import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import gitDiffParser from 'gitdiff-parser'
-import { createPatchesFromDiff, parseReviewResponse, reviewFileDiff } from '@/services/ai-pr-review/review.ts'
+import {
+  createPatchesFromDiff,
+  isHunkIsTooLarge,
+  parseReviewResponse,
+  reviewFileDiff
+} from '@/services/ai-pr-review/review.ts'
 
 // Marked renderer létrehozása és testreszabása
 const renderer = new marked.Renderer()
@@ -587,7 +592,7 @@ const analyzeDiff = async () => {
   const patches = files.map((file) => ({
     fileName: file.newPath || file.oldPath,
     patch: createPatchesFromDiff(file.hunks)
-  }))
+  })).filter((it) => isHunkIsTooLarge(it.patch) === false)
   const reviewResponses = (await Promise.all(patches.map(async (patch) => {
       return await reviewFileDiff(patch.patch, patch.fileName)
     })
