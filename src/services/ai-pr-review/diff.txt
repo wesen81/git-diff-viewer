@@ -1,0 +1,124 @@
+diff --git a/docker/docker-compose.yml b/docker/docker-compose.yml
+new file mode 100644
+index 0000000..fa29bd3
+--- /dev/null
++++ b/docker/docker-compose.yml
+@@ -0,0 +1,21 @@
++version: '3.7'
++services:
++  product_catalog_be:
++    container_name:  product_catalog_be
++    image: cr.intra.danubiusinfo.hu:5001/raiffeisen/product-catalog:0.0.1-SNAPSHOT
++    ports:
++      - "8080:8080"
++    environment:
++      - DB_DEFAULT_SCHEMA=onboarding
++      - DB_JDBC_URL=jdbc:postgresql://localhost:5432/productcatalog
++      - DB_USER=postgres
++      - DB_PASSWORD=productcatalog123
++      - JWT_ISSUER_URI=http://auth-server:9000
++      - PRODUCT_CATALOG_PING_ID_CLIENT_ID=RBHU-PRODUCT-CATALO
++      - PRODUCT_CATALOG_PING_ID_CLIENT_SECRET=secret2
++      - PRODUCT_CATALOG_PING_ID_TOKEN_ENDPOINT=/oauth2/token
++      - PRODUCT_CATALOG_PING_ID_AUTHORIZATION_ENDPOINT=/oauth2/authorize
++      - PRODUCT_CATALOG_PING_ID_REDIRECT_URL=http://localhost:4200/authentication-callback
++      - PRODUCT_CATALOG_ALLOWED_ORIGINS=http://localhost:4200
++      - GR_PRODUCT_CATALOG=GR_PRODUCT_CATALOG
++
+diff --git a/pom.xml b/pom.xml
+index 5109933..7bc44be 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -300,12 +300,12 @@
+                                 </tags>
+                             </to>
+                             <container>
+-                                <ports>
+-                                    <port>8981</port>
+-                                </ports>
+-                                <jvmFlags>
+-                                    <jvmFlag>-Dspring.profiles.active=dev</jvmFlag>
+-                                </jvmFlags>
++<!--                                <ports>-->
++<!--                                    <port>8981</port>-->
++<!--                                </ports>-->
++<!--                                <jvmFlags>-->
++<!--                                    <jvmFlag>-Dspring.profiles.active=dev</jvmFlag>-->
++<!--                                </jvmFlags>-->
+                             </container>
+                         </configuration>
+                         <executions>
+diff --git a/src/main/resources/application-dev.properties b/src/main/resources/application-dev.properties
+index b6b4adf..23dfd58 100644
+--- a/src/main/resources/application-dev.properties
++++ b/src/main/resources/application-dev.properties
+@@ -1,9 +1,8 @@
+ spring.datasource.url=jdbc:postgresql://product-catalog-db:5432/postgres
+-spring.datasource.driverClassName=org.postgresql.Driver
+ spring.datasource.username=postgres
+ spring.datasource.password=mysecretpassword
+
+ spring.jpa.properties.hibernate.show_sql=true
+ spring.jpa.properties.hibernate.format_sql=true
+
+-server.port=8981
+\ No newline at end of file
++server.port=8981
+diff --git a/src/main/resources/application-local.properties b/src/main/resources/application-local.properties
+index 6b02e46..37f89c5 100644
+--- a/src/main/resources/application-local.properties
++++ b/src/main/resources/application-local.properties
+@@ -1,17 +1,15 @@
+-spring.datasource.url=jdbc:postgresql://localhost:5432/postgres
+-spring.datasource.driverClassName=org.postgresql.Driver
++spring.liquibase.default-schema=onboarding
++spring.datasource.url=jdbc:postgresql://localhost:5432/productcatalog
+ spring.datasource.username=postgres
+-spring.datasource.password=mysecretpassword
+-
++spring.datasource.password=productcatalog123
++spring.jpa.properties.hibernate.default_schema=onboarding
+ spring.jpa.properties.hibernate.show_sql=true
+ spring.jpa.properties.hibernate.format_sql=true
+ spring.security.oauth2.resourceserver.jwt.issuer-uri=http://auth-server:9000
+ application.ping-id.client-id=RBHU-PRODUCT-CATALOG
+ application.ping-id.client-secret=secret2
+ application.ping-id.token-endpoint=/oauth2/token
++application.ping-id.authorization-endpoint=/oauth2/authorize
+ application.ping-id.redirect-url=http://localhost:4200/authentication-callback
+-application.ping-id.login-url=${spring.security.oauth2.resourceserver.jwt.issuer-uri}/oauth2/authorize?client_id=${application.ping-id.client-id}&response_type=${application.ping-id.response-type}&scope=${application.ping-id.scope}&redirect_uri=${application.ping-id.redirect-url}
+-application.ping-id.response-type=code
+-application.ping-id.scope=openid%20profile%20email
+ application.allowed-origins=http://localhost:4200
+ application.product-catalog-ad-groups.product-catalog-user=GR_PRODUCT_CATALOG
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+index 04fa3bd..200cdf6 100644
+--- a/src/main/resources/application.properties
++++ b/src/main/resources/application.properties
+@@ -1,9 +1,21 @@
+ spring.liquibase.enabled=true
+ spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.xml
+-spring.liquibase.default-schema=onboarding
+-#spring.jpa.hibernate.naming.physical-strategy=org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+-#spring.jpa.hibernate.naming.implicit-strategy=org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+-spring.jpa.properties.hibernate.default_schema=onboarding
++spring.liquibase.default-schema=${DB_DEFAULT_SCHEMA}
+ spring.jpa.open-in-view=false
+-
++spring.jpa.properties.hibernate.default_schema=${DB_DEFAULT_SCHEMA}
+ server.servlet.context-path=/api
++spring.datasource.url=${DB_JDBC_URL}
++spring.datasource.driverClassName=org.postgresql.Driver
++spring.datasource.username=${DB_USER}
++spring.datasource.password=${DB_PASSWORD}
++spring.security.oauth2.resourceserver.jwt.issuer-uri=${JWT_ISSUER_URI}
++application.ping-id.client-id=${PRODUCT_CATALOG_PING_ID_CLIENT_ID}
++application.ping-id.client-secret=${PRODUCT_CATALOG_PING_ID_CLIENT_SECRET}
++application.ping-id.token-endpoint=${PRODUCT_CATALOG_PING_ID_TOKEN_ENDPOINT}
++application.ping-id.authorization-endpoint=${PRODUCT_CATALOG_PING_ID_AUTHORIZATION_ENDPOINT}
++application.ping-id.redirect-url=${PRODUCT_CATALOG_PING_ID_REDIRECT_URL}
++application.ping-id.login-url=${spring.security.oauth2.resourceserver.jwt.issuer-uri}${application.ping-id.authorization-endpoint}?client_id=${application.ping-id.client-id}&response_type=${application.ping-id.response-type}&scope=${application.ping-id.scope}&redirect_uri=${application.ping-id.redirect-url}
++application.ping-id.response-type=code
++application.ping-id.scope=openid%20profile%20email
++application.allowed-origins=${PRODUCT_CATALOG_ALLOWED_ORIGINS}
++application.product-catalog-ad-groups.product-catalog-user=${GR_PRODUCT_CATALOG}
