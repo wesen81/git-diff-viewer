@@ -7,7 +7,7 @@ import { RouterLink, RouterView } from 'vue-router'
     <header class="header">
       <nav class="nav-container">
         <RouterLink to="/" class="logo">
-          Git PR Viewer
+          NASUS - Git Reviewer
         </RouterLink>
         <div class="nav-links">
           <RouterLink to="/" class="nav-link">

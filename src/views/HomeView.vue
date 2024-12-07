@@ -162,6 +162,15 @@
       <p>Repository: {{ prDetails.repository }} | PR #{{ prDetails.number }}</p>
       <div ref="diffContainer" class="diff-container" v-html="htmlDiff"></div>
     </div>
+
+    <!-- Nasus Avatar -->
+    <div class="avatar-container">
+      <img 
+        src="@/assets/nasus.png" 
+        alt="Nasus"
+        class="avatar-image"
+      >
+    </div>
   </div>
 </template>
 
@@ -1210,5 +1219,26 @@ const toggleProgressBar = (show: boolean) => {
   margin-top: 0.5rem;
   font-size: 0.875rem;
   color: var(--text-color);
+}
+
+.avatar-container {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.avatar-image {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid var(--primary-color, #42b883);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
 }
 </style>
