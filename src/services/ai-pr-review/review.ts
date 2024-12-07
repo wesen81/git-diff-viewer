@@ -5,7 +5,7 @@ import { reviewFileDiffPrompt } from '@/services/ai-pr-review/reviewPrompts.ts'
 import { getTokenCount } from '@/services/ai-pr-review/tokinzer.ts'
 
 
-const TOKEN_LIMIT = 40000
+const TOKEN_LIMIT = 20000
 
 export const createPatchesFromDiff = (hunks: Hunk[]): string => {
   const getLineNumber = (number?: string) => {
