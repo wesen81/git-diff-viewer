@@ -41,6 +41,15 @@
       </div>
     </header>
 
+    <div class="analyze-container" v-if="htmlDiff">
+      <button
+        @click="analyzeDiff"
+        class="analyze-button"
+      >
+        Elemzés
+      </button>
+    </div>
+
     <div v-if="showRawDiffModal" class="modal-overlay">
       <div class="modal-content">
         <div class="modal-header">
@@ -528,7 +537,7 @@ const handleFileLoad = async () => {
 
   } catch (error) {
     console.error('Error reading file:', error)
-    error.value = 'Hiba történt a fájl beolvasása közben'
+    error.value = 'Hiba t��rtént a fájl beolvasása közben'
   }
 }
 
@@ -567,6 +576,14 @@ const addCommentToLine = (fileName: string, lineNumber: number, commentText: str
     fileName,
     timestamp: new Date()
   })
+}
+
+const analyzeDiff = async () => {
+  // TODO: AI implementációja
+  // - Diff elemzése
+  // - Javaslatok generálása
+  // - Automatikus kommentek létrehozása
+  console.log('Elemzés indítása...')
 }
 </script>
 
@@ -1132,6 +1149,33 @@ const addCommentToLine = (fileName: string, lineNumber: number, commentText: str
     margin-bottom: 0.5rem;
     color: var(--text-color);
     font-size: 0.875rem;
+  }
+}
+
+.analyze-container {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.analyze-button {
+  padding: 0.75rem 2rem;
+  background-color: var(--success-color, #28a745);
+  border: 1px solid var(--success-color, #28a745);
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: var(--success-hover-color, #218838);
+    border-color: var(--success-hover-color, #218838);
+  }
+
+  &:active {
+    transform: translateY(1px);
   }
 }
 </style>
